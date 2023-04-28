@@ -4,7 +4,7 @@ import torch
 import typing as th
 from torchvision import datasets, transforms
 from torch.utils import data
-
+from blocks import ConvBlock, DeconvBlock, LinearBlock, Reshape
 
 class ConvAutoEncoder(pl.LightningModule):
     def __init__(self, kernel_size=3, padding=1, latent_dim = 8):
