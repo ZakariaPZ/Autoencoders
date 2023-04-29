@@ -16,7 +16,7 @@ class LinearBlock(nn.Module):
                  input_size,
                  output_size,
                  activation : th.Callable[[torch.Tensor], torch.Tensor] = nn.ReLU):
-        super(ConvBlock, self).__init__()
+        super(LinearBlock, self).__init__()
         self.linear = nn.Linear(input_size,
                               output_size)
         self.bn = nn.BatchNorm1d(output_size)
