@@ -6,6 +6,47 @@ from torchvision import datasets, transforms
 from torch.utils import data
 from blocks import ConvBlock, DeconvBlock, LinearBlock, Reshape
 
+# TODO: add docstrings, type-hinting
+
+class LinearAutoEncoder(pl.LightningModule):
+    def __init__(self, input_dim, latent_dim):
+        super(LinearAutoEncoder, self).__init__()
+
+        if latent_dim >= input_dim:
+            raise ValueError("Latent dimension cannot be bigger than input dimension.")
+
+        self.encoder = nn.Sequential(
+            LinearBlock(input_dim, 392),
+            LinearBlock(392, 196),
+            LinearBlock(196, latent_dim)
+        ) 
+        self.decoder = nn.Sequential(
+            LinearBlock(latent_dim, 196),
+            LinearBlock(196, 392),
+            LinearBlock(392, input_dim)
+        ) 
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x 
+    
+class SparseAutoencoder(LinearAutoEncoder):
+    def __init__(self, input_dim, latent_dim):
+        super().__init__()
+
+        if latent_dim < input_dim:
+            raise ValueError("Latent dimension cannot be smaller than input dimension.")
+
+        self.encoder = nn.Sequential(
+            LinearBlock(input_dim, 1024),
+            LinearBlock(1024, latent_dim),
+        ) 
+        self.decoder = nn.Sequential(
+            LinearBlock(latent_dim, 1024),
+            LinearBlock(1024, input_dim)
+        ) 
+
 class ConvAutoEncoder(pl.LightningModule):
     def __init__(self, kernel_size=3, padding=1, latent_dim = 8):
         super(ConvAutoEncoder, self).__init__()
@@ -59,7 +100,3 @@ class ConvAutoEncoder(pl.LightningModule):
         z = self.encoder(input)
         x_hat = self.decoder(z)
         return x_hat
-    
-class SparseAutoencoder(AutoEncoder):
-    def __init__(self, kernel_size=3, padding=1, latent_dim=8):
-        super().__init__(kernel_size, padding, latent_dim)
