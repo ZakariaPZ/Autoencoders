@@ -20,16 +20,22 @@ class LinearBlock(nn.Module):
         self.linear = nn.Linear(input_size,
                               output_size)
         self.bn = nn.BatchNorm1d(output_size)
-        self.relu = nn.ReLU()
+        self.activation = activation()
 
     def forward(self, x):
         x = self.linear(x)
         x = self.bn(x)
-        x = self.relu(x)
+        x = self.activation(x)
         return x
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=2, padding=1):
+    def __init__(self, 
+                 in_channels, 
+                 out_channels, 
+                 activation : th.Callable[[torch.Tensor], torch.Tensor] = nn.ReLU, 
+                 kernel_size=3, 
+                 stride=2, 
+                 padding=1):
         super(ConvBlock, self).__init__()
         self.conv = nn.Conv2d(in_channels, 
                               out_channels, 
@@ -37,12 +43,12 @@ class ConvBlock(nn.Module):
                               stride=stride, 
                               padding=padding)
         self.bn = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU()
+        self.activation = activation()
 
     def forward(self, x):
         x = self.conv(x)
         x = self.bn(x)
-        x = self.relu(x)
+        x = self.activation(x)
         return x
 
 class DeconvBlock(nn.Module):
