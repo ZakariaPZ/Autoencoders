@@ -62,9 +62,9 @@ class LinearAutoEncoder(pl.LightningModule):
 
 
 class ConvAutoEncoder(LinearAutoEncoder):
-    def __init__(self, latent_dim = 8):
+    def __init__(self, latent_dim=2):
         super().__init__()
-        
+
         self.encoder = nn.Sequential(
             ConvBlock(1, 16),
             ConvBlock(16, 32),
