@@ -10,8 +10,9 @@ from blocks import ConvBlock, DeconvBlock, LinearBlock, Reshape
 
 class LinearAutoEncoder(pl.LightningModule):
     def __init__(self,
-                 encoder_layers = [784, 392, 196, 2],
-                 decoder_layers = [2, 196, 392, 784],
+                 latent_dim = 2,
+                 encoder_layers = [784, 392, 196],
+                 decoder_layers = [196, 392, 784],
                  regularizer = None):
         super(LinearAutoEncoder, self).__init__()
 
