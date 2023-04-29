@@ -9,30 +9,34 @@ from blocks import ConvBlock, DeconvBlock, LinearBlock, Reshape
 # TODO: add docstrings, type-hinting, VAE
 
 class LinearAutoEncoder(pl.LightningModule):
-    def __init__(self, input_dim, latent_dim):
+    def __init__(self,
+                 encoder_layers = [784, 392, 196, 2],
+                 decoder_layers = [2, 196, 392, 784],
+                 regularizer = None):
         super(LinearAutoEncoder, self).__init__()
+
         self.training_step_outputs = []
 
-        if latent_dim >= input_dim:
-            raise ValueError("Latent dimension cannot be larger than input dimension.")
-
+        # REFACTOR TO USE ENCODER/DECODER LIST
         self.encoder = nn.Sequential(
-            LinearBlock(input_dim, 392),
+            LinearBlock(784, 392),
             LinearBlock(392, 196),
-            LinearBlock(196, latent_dim)
+            LinearBlock(196, 2)
         ) 
 
         self.decoder = nn.Sequential(
-            LinearBlock(latent_dim, 196),
+            LinearBlock(2, 196),
             LinearBlock(196, 392),
-            LinearBlock(392, input_dim)
+            LinearBlock(392, 784)
         ) 
+
 
     def training_step(self, batch, batch_idx):
         x, y = batch
         x = x.view(-1, 28*28)
         x_hat = self(x)
         loss = nn.functional.mse_loss(x_hat, x)
+        # Add optional L2 penalty if REG = TRUES
         self.training_step_outputs.append(loss)
 
         return loss
@@ -56,33 +60,14 @@ class LinearAutoEncoder(pl.LightningModule):
         return x_hat
 
 
-class SparseAutoencoder(LinearAutoEncoder):
-    def __init__(self, input_dim, latent_dim):
-        super().__init__()
-
-        if latent_dim < input_dim:
-            raise ValueError("Latent dimension cannot be smaller than input dimension.")
-
-        self.encoder = nn.Sequential(
-            LinearBlock(input_dim, 1024),
-            LinearBlock(1024, latent_dim),
-        ) 
-
-        self.decoder = nn.Sequential(
-            LinearBlock(latent_dim, 1024),
-            LinearBlock(1024, input_dim)
-        ) 
-
-
 class ConvAutoEncoder(LinearAutoEncoder):
-    def __init__(self, kernel_size=3, padding=1, latent_dim = 8):
+    def __init__(self, latent_dim = 8):
         super().__init__()
-        stride = 2
-    
+        
         self.encoder = nn.Sequential(
-            ConvBlock(1, 16, kernel_size, stride, padding),
-            ConvBlock(16, 32, kernel_size, stride, padding),
-            ConvBlock(32, 64, kernel_size, stride, padding),
+            ConvBlock(1, 16),
+            ConvBlock(16, 32),
+            ConvBlock(32, 64),
             nn.Flatten(),
             nn.Linear(64 * 4 * 4, latent_dim)
         )
@@ -90,9 +75,9 @@ class ConvAutoEncoder(LinearAutoEncoder):
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, 64 * 4 * 4),
             Reshape(-1, 64, 4, 4),
-            DeconvBlock(64, 32, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=0),
-            DeconvBlock(32, 16, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=1),
-            DeconvBlock(16, 1, kernel_size=kernel_size, stride=stride, padding=padding, output_padding=1, 
+            DeconvBlock(64, 32, output_padding=0),
+            DeconvBlock(32, 16, output_padding=1),
+            DeconvBlock(16, 1, output_padding=1, 
                         activation=nn.Sigmoid)
         )
     
@@ -103,8 +88,3 @@ class ConvAutoEncoder(LinearAutoEncoder):
         self.training_step_outputs.append(loss)
 
         return loss
-
-    def forward(self, input):
-        z = self.encoder(input)
-        x_hat = self.decoder(z)
-        return x_hat
