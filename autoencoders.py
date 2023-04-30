@@ -9,8 +9,8 @@ from blocks import ConvBlock, DeconvBlock, LinearBlock, Reshape
 class LinearAutoEncoder(pl.LightningModule):
     def __init__(self,
                  latent_dim = 2,
-                 encoder_layers = [784, 392, 196],
-                 decoder_layers = [196, 392, 784],
+                #  encoder_layers = [784, 392, 196],
+                #  decoder_layers = [196, 392, 784],
                  regularizer = None):
         super(LinearAutoEncoder, self).__init__()
 
@@ -18,28 +18,27 @@ class LinearAutoEncoder(pl.LightningModule):
 
         # REFACTOR TO USE ENCODER/DECODER LIST
         
-        self.encoder = nn.Sequential(*[
-            LinearBlock(encoder_layers[i], encoder_layers[i+1]) for i in range(len(encoder_layers)-1) 
-            ], LinearBlock(encoder_layers[-1], latent_dim)
-        )
-
-        self.decoder = nn.Sequential(
-            LinearBlock(latent_dim, decoder_layers[0]), 
-            *[LinearBlock(decoder_layers[i], decoder_layers[i+1]) for i in range(len(decoder_layers)-1)]
-        )
-
-
-        # self.encoder = nn.Sequential(
-        #     LinearBlock(784, 392),
-        #     LinearBlock(392, 196),
-        #     LinearBlock(196, 2)
-        # ) 
+        # self.encoder = nn.Sequential(*[
+        #     LinearBlock(encoder_layers[i], encoder_layers[i+1]) for i in range(len(encoder_layers)-1) 
+        #     ], LinearBlock(encoder_layers[-1], latent_dim)
+        # )
 
         # self.decoder = nn.Sequential(
-        #     LinearBlock(2, 196),
-        #     LinearBlock(196, 392),
-        #     LinearBlock(392, 784)
-        # ) 
+        #     LinearBlock(latent_dim, decoder_layers[0]), 
+        #     *[LinearBlock(decoder_layers[i], decoder_layers[i+1]) for i in range(len(decoder_layers)-1)]
+        # )
+
+        self.encoder = nn.Sequential(
+            LinearBlock(784, 392),
+            LinearBlock(392, 196),
+            LinearBlock(196, latent_dim)
+        ) 
+
+        self.decoder = nn.Sequential(
+            LinearBlock(latent_dim, 196),
+            LinearBlock(196, 392),
+            LinearBlock(392, 784, activation=nn.Tanh)
+        ) 
 
     def get_loss(self, batch):
         x, _ = batch
@@ -54,14 +53,6 @@ class LinearAutoEncoder(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
-    # def train_dataloader(self):
-    #     mnist_data = datasets.MNIST(root='./data', train=False, download=True, 
-    #                                 transform=transforms.ToTensor())
-
-    #     batch_size = 64
-    #     dataloader = data.DataLoader(mnist_data, batch_size=batch_size, shuffle=True)
-
-    #     return dataloader
     def training_step(self, batch, batch_idx):
         loss = self.get_loss(batch)
         self.log("train_loss", loss)
@@ -99,7 +90,7 @@ class ConvAutoEncoder(LinearAutoEncoder):
             DeconvBlock(64, 32, output_padding=0),
             DeconvBlock(32, 16, output_padding=1),
             DeconvBlock(16, 1, output_padding=1, 
-                        activation=nn.Sigmoid)
+                        activation=nn.Tanh)
         )
 
     def get_loss(self, batch):
