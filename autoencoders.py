@@ -2,8 +2,6 @@ import lightning as pl
 from torch import nn
 import torch
 import typing as th
-from torchvision import datasets, transforms
-from torch.utils import data
 from blocks import ConvBlock, DeconvBlock, LinearBlock, Reshape
 
 # TODO: add docstrings, type-hinting, VAE
@@ -19,26 +17,36 @@ class LinearAutoEncoder(pl.LightningModule):
         self.training_step_outputs = []
 
         # REFACTOR TO USE ENCODER/DECODER LIST
-        self.encoder = nn.Sequential(
-            LinearBlock(784, 392),
-            LinearBlock(392, 196),
-            LinearBlock(196, 2)
-        ) 
+        
+        self.encoder = nn.Sequential(*[
+            LinearBlock(encoder_layers[i], encoder_layers[i+1]) for i in range(len(encoder_layers)-1) 
+            ], LinearBlock(encoder_layers[-1], latent_dim)
+        )
 
         self.decoder = nn.Sequential(
-            LinearBlock(2, 196),
-            LinearBlock(196, 392),
-            LinearBlock(392, 784)
-        ) 
+            LinearBlock(latent_dim, decoder_layers[0]), 
+            *[LinearBlock(decoder_layers[i], decoder_layers[i+1]) for i in range(len(decoder_layers)-1)]
+        )
 
 
-    def training_step(self, batch, batch_idx):
-        x, y = batch
+        # self.encoder = nn.Sequential(
+        #     LinearBlock(784, 392),
+        #     LinearBlock(392, 196),
+        #     LinearBlock(196, 2)
+        # ) 
+
+        # self.decoder = nn.Sequential(
+        #     LinearBlock(2, 196),
+        #     LinearBlock(196, 392),
+        #     LinearBlock(392, 784)
+        # ) 
+
+    def get_loss(self, batch):
+        x, _ = batch
         x = x.view(-1, 28*28)
         x_hat = self(x)
         loss = nn.functional.mse_loss(x_hat, x)
         # Add optional L2 penalty if REG = TRUES
-        self.training_step_outputs.append(loss)
 
         return loss
 
@@ -46,14 +54,26 @@ class LinearAutoEncoder(pl.LightningModule):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
-    def train_dataloader(self):
-        mnist_data = datasets.MNIST(root='./data', train=False, download=True, 
-                                    transform=transforms.ToTensor())
+    # def train_dataloader(self):
+    #     mnist_data = datasets.MNIST(root='./data', train=False, download=True, 
+    #                                 transform=transforms.ToTensor())
 
-        batch_size = 64
-        dataloader = data.DataLoader(mnist_data, batch_size=batch_size, shuffle=True)
+    #     batch_size = 64
+    #     dataloader = data.DataLoader(mnist_data, batch_size=batch_size, shuffle=True)
 
-        return dataloader
+    #     return dataloader
+    def training_step(self, batch, batch_idx):
+        loss = self.get_loss(batch)
+        self.log("train_loss", loss)
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        loss = self.get_loss(batch)
+        self.log("val_loss", loss)
+
+    def test_step(self, batch, batch_idx):
+        loss = self.get_loss(batch)
+        self.log("test_loss", loss)
 
     def forward(self, input):
         z = self.encoder(input)
@@ -81,11 +101,11 @@ class ConvAutoEncoder(LinearAutoEncoder):
             DeconvBlock(16, 1, output_padding=1, 
                         activation=nn.Sigmoid)
         )
-    
-    def training_step(self, batch, batch_idx):
-        x, y = batch
+
+    def get_loss(self, batch):
+        x, _ = batch
         x_hat = self(x)
         loss = nn.functional.mse_loss(x_hat, x)
-        self.training_step_outputs.append(loss)
+        # Add optional L2 penalty if REG = TRUES
 
         return loss
