@@ -2,7 +2,7 @@ from typing import Any, Optional
 import lightning as pl
 import lightning.pytorch as pl
 from lightning.pytorch.utilities.types import STEP_OUTPUT
-import torch
+from numpy.random import randint 
 import typing as th
 
 class LossCallback(pl.Callback):
@@ -15,7 +15,8 @@ class LossCallback(pl.Callback):
                                 dataloader_idx: int = 0) -> None:
     
         x, _ = batch
-        image = x[batch_idx]
+        idx = randint(0, x.shape[0])
+        image = x[idx]
         reconstruction = pl_module(image.unsqueeze(0))
         pl_module.logger.experiment.add_image('Original', image, 0)
         pl_module.logger.experiment.add_image('Reconstruction', reconstruction.squeeze(0), 1)
