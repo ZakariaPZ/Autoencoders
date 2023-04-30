@@ -4,36 +4,62 @@ from callbacks import LossCallback
 from torchvision import datasets, transforms
 from torch.utils import data
 import torch
+import argparse
+import os
 
-if __name__ == "__main__":
+def main(args):
 
-    # Transformations applied on each image => only make them a tensor
+    pl.seed_everything(42)
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
-    # Loading the training dataset. We need to split it into a training and validation part
     train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-    pl.seed_everything(42)
     train_set, val_set = torch.utils.data.random_split(train_dataset, [50000, 10000])
-
-    # Loading the test set
     test_set = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
 
-    train_loader = data.DataLoader(train_set, batch_size=64, shuffle=True)
-    val_loader = data.DataLoader(val_set, batch_size=64, shuffle=False)
-    test_loader = data.DataLoader(test_set, batch_size=64, shuffle=False)
+    train_loader = data.DataLoader(train_set, batch_size=args.bs, shuffle=True)
+    val_loader = data.DataLoader(val_set, batch_size=args.bs, shuffle=False)
+    test_loader = data.DataLoader(test_set, batch_size=args.bs, shuffle=False)
 
-    model = ConvAutoEncoder()
-    trainer = pl.Trainer(max_epochs=5, callbacks=[LossCallback()]) # add callbacks for sample reconstruction per epoch
-    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    
+    if not os.path.exists(args.path):
+        os.makedirs(args.path)
+    
+    # save the run details and model
+    file_name = "\model.ckpt"
+    model_path = args.path + model_path
+
+    if args.type == 'CNN':
+        model = ConvAutoEncoder()
+    else:
+        model = LinearAutoEncoder()
+
+    if not os.path.isfile(model_path):
+
+        trainer = pl.Trainer(max_epochs=args.epochs, callbacks=[LossCallback()]) # add callbacks for sample reconstruction per epoch
+        trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+
+        with open(args.path + '/config.txt', 'w') as f:
+            epochs = "Epochs: " + str(args.epochs) + '\n'
+            bs = "Batch Size: " + str(args.bs) + '\n'
+            model_type = args.type
+            f.writelines([epochs, bs, model_type])
+
+        checkpoint_path = model_path
+        trainer.save_checkpoint(checkpoint_path)
+
+    else:
+        model = model.load_from_checkpoint(model_path)
 
     test_result = trainer.test(model, dataloaders=test_loader, verbose=False)
-    print(test_result)
-    # result = {"test": test_result, "val": val_result}
-    
-    # save the model checkpoint
-    checkpoint_path = "my_model.ckpt" 
-    trainer.save_checkpoint(checkpoint_path)
+    print('\nTest Error: ' + test_result)
 
-    # model = Autoencoder.load_from_checkpoint(pretrained_filename)
-    # above: load model and use for generation
-    # fix activations in models final layers
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(prog='MNIST Autoencoders')
+    parser.add_argument('--model_folder', type=str, required=True, help='Folder to save run details in.')
+    parser.add_argument('--epochs', type=str, required=True, help='Number of epochs to train for.')
+    parser.add_argument('--bs', type=str, required=True, help='Batch size.')
+    parser.add_argument('--type', type=str, required=True, help='CNN or Linear.')
+
+    args = parser.parse_args()
+    main(args)
