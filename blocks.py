@@ -11,22 +11,22 @@ class Reshape(nn.Module):
     def forward(self, x):
         return x.view(self.shape)
 
-class LinearBlock(nn.Module):
-    def __init__(self, 
-                 input_size,
-                 output_size,
-                 activation : th.Callable[[torch.Tensor], torch.Tensor] = nn.ReLU):
-        super(LinearBlock, self).__init__()
-        self.linear = nn.Linear(input_size,
-                              output_size)
-        self.bn = nn.BatchNorm1d(output_size)
-        self.activation = activation()
+# class LinearBlock(nn.Module):
+#     def __init__(self, 
+#                  input_size,
+#                  output_size,
+#                  activation : th.Callable[[torch.Tensor], torch.Tensor] = nn.ReLU):
+#         super(LinearBlock, self).__init__()
+#         self.linear = nn.Linear(input_size,
+#                               output_size)
+#         self.bn = nn.BatchNorm1d(output_size)
+#         self.activation = activation()
 
-    def forward(self, x):
-        x = self.linear(x)
-        x = self.bn(x)
-        x = self.activation(x)
-        return x
+#     def forward(self, x):
+#         x = self.linear(x)
+#         x = self.bn(x)
+#         x = self.activation(x)
+#         return x
 
 class ConvBlock(nn.Module):
     def __init__(self, 
