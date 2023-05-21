@@ -9,39 +9,6 @@ from autoencoders import BetaVAE
 cuda_avail = torch.cuda.is_available()
 device = torch.device("cuda" if cuda_avail else "cpu")
 
-
-def main():
-    mnist_data = datasets.MNIST(root='./data', train=True, download=True, 
-                                transform=transforms.ToTensor())
-
-    batch_size = 64
-    dataloader = data.DataLoader(mnist_data, batch_size=batch_size, shuffle=True)
-
-    model = BetaVAE().to(device)
-    loss = VAELoss()
-
-    learning_rate = 1e-4
-    optim = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    epochs = 30
-
-    for epoch in range(epochs):
-
-        for i, train_data in enumerate(tqdm(dataloader)):
-            x, _ = train_data
-
-            x = x.to(device)
-            xtilde, mu, log_variance = model(x)
-            error = loss(xtilde, x, mu, log_variance)
-
-            optim.zero_grad()
-            error.backward()
-            optim.step()
-
-    torch.save(model, 'models/small_VAE.pt')
-
-if __name__ == '__main__':
-    main()
-
 def main(args):
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
 
@@ -53,18 +20,27 @@ def main(args):
     val_loader = data.DataLoader(val_set, batch_size=args.bs, shuffle=False)
     test_loader = data.DataLoader(test_set, batch_size=args.bs, shuffle=False)
 
+    model = BetaVAE().to(device)
+    loss = BetaVAE.VAE_loss()
 
+    learning_rate = 1e-4
+    optim = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    epochs = 30
 
-    # pl.seed_everything(42)
-    # transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+    for epoch in range(epochs):
 
-    # train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-    # train_set, val_set = torch.utils.data.random_split(train_dataset, [50000, 10000])
-    # test_set = datasets.MNIST(root='./data', train=False, transform=transform, download=True)
+        for i, train_data in enumerate(tqdm(train_loader)):
+            x, _ = train_data
 
-    # train_loader = data.DataLoader(train_set, batch_size=args.bs, shuffle=True)
-    # val_loader = data.DataLoader(val_set, batch_size=args.bs, shuffle=False)
-    # test_loader = data.DataLoader(test_set, batch_size=args.bs, shuffle=False)
+            x = x.to(device)
+            xhat = model(x)
+            error = loss(x, xhat)
+
+            optim.zero_grad()
+            error.backward()
+            optim.step()
+
+    torch.save(model, 'models/small_VAE.pt')
 
     
     # if not os.path.exists(args.path):
